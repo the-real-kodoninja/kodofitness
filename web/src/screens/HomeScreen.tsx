@@ -1,48 +1,65 @@
 import React from 'react';
+import { useQuery, useSubscription } from '@apollo/client';
+import { gql } from '@apollo/client';
 import PostCard from '../components/PostCard';
-import { useState } from 'react';
 
-const dummyPosts = [
-  {
-    id: '1',
-    username: 'fitninja',
-    userPhoto: 'https://via.placeholder.com/40',
-    timeAgo: '2h ago',
-    content: 'Just crushed a 5K run! 🏃‍♂️ Feeling unstoppable.',
-    media: 'https://via.placeholder.com/300',
-    likes: 42,
-    comments: 8,
-  },
-  // Add more dummy posts
-];
+const GET_POSTS = gql`
+  query GetPosts {
+    posts {
+      id
+      username
+      userPhoto
+      timeAgo
+      content
+      media
+      likes
+      comments
+    }
+  }
+`;
+
+const POST_ADDED = gql`
+  subscription PostAdded {
+    postAdded {
+      id
+      username
+      userPhoto
+      timeAgo
+      content
+      media
+      likes
+      comments
+    }
+  }
+`;
 
 const HomeScreen: React.FC = () => {
-  const [aiInsight, setAiInsight] = useState('');
+  const { data, loading, error } = useQuery(GET_POSTS);
+  const { data: subscriptionData } = useSubscription(POST_ADDED);
 
-  const fetchAiInsight = async () => {
-    // Mocked API call
-    setAiInsight('Nimbus.ai: Try a 20-min HIIT workout today!');
-  };
+  const posts = React.useMemo(() => {
+    const fetchedPosts = data?.posts || [];
+    if (subscriptionData?.postAdded) {
+      return [subscriptionData.postAdded, ...fetchedPosts];
+    }
+    return fetchedPosts;
+  }, [data, subscriptionData]);
+
+  if (loading) return <p className="text-center text-gray-900 dark:text-white">Loading...</p>;
+  if (error) return <p className="text-center text-red-500">Error: {error.message}</p>;
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 py-4">
       <h1 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-4">
         KodoFitness
       </h1>
-      <button
-        onClick={fetchAiInsight}
-        className="bg-blue-500 text-white px-4 py-2 rounded-lg mb-4 mx-auto block"
-      >
-        Get Nimbus.ai Insight
-      </button>
-      {aiInsight && (
-        <p className="text-gray-900 dark:text-white text-center">{aiInsight}</p>
-      )}
       <div className="flex flex-col items-center">
-        {dummyPosts.map((post) => (
+        {posts.map((post: any) => (
           <PostCard key={post.id} post={post} />
         ))}
       </div>
     </div>
   );
 };
+
+export default HomeScreen;
